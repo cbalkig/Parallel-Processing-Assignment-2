@@ -23,14 +23,14 @@ int main(int argc, char *argv[]) {
 
     // Declarations
     char fileName = "indata.txt";
+    int size = 100;
     int process_count, my_id;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     int my_name_len;
     int err;
     MPI_Status status;
-    float x[100], sum, sum0;
+    float x[size], sum, sum0;
     int root = 0;
-    int data_len = 100;
 
     // MPI Init
     err = MPI_Init(&argc, &argv);
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     MPI_Get_processor_name(my_name, &my_name_len);
     printf("Process %d:\t\t\tInputs:\t\tProcessor Count: %d\t\tMy ID: %d\t\tMy Name: %s\n", my_id, process_count, my_id, my_name);
-    int slider = data_len / process_count;
+    int slider = size / process_count;
 
     // Read or get file content
     if (my_id == root) {
