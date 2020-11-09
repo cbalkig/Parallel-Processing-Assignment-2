@@ -1,35 +1,73 @@
 #include <stdio.h>
 #include <mpi.h>
 #include <stdlib.h>
+#include <string.h>
 
-void readFile(char name, float x[100], int my_id) {
+int getLineCount(char name[], int my_id) {
     FILE *file;
 
     file = fopen(name, "r");
     if (file == NULL) {
-        printf("Process %d:\t\t\tFile read error!\n", my_id);
+        printf("Process %d:\t\t\tFile read error: %s!\n", my_id, name);
         exit(-1);
     }
 
-    for(int i=0; i<100; i++) {
-        fscanf(file, "%f*s", &x[i]);
+    int count_lines = 0;
+    char chr = chr = getc(file);
+    while (chr != EOF)
+    {
+        if (chr == '\n')
+        {
+            count_lines++;
+        }
+        chr = getc(file);
+    }
+    fclose(file);
+    return count_lines + 1;
+}
+
+void readFile(char name[], int size, int x[size][size], int my_id) {
+    FILE *file;
+
+    file = fopen(name, "r");
+    if (file == NULL) {
+        printf("Process %d:\t\t\tFile read error: %s!\n", my_id, name);
+        exit(-1);
+    }
+
+    char line[1000];
+    for(int i=0; i<size; i++) {
+        for(int j=0; j<size; j++) {
+            fscanf(file, "%d*s", &line);
+            x[i][j] = *line;
+        }
     }
     fclose(file);
 }
 
+void printMatrix(int size, int matrix[size][size]){
+    int row, columns;
+    for (row=0; row<size; row++)
+    {
+        for(columns=0; columns<size; columns++)
+        {
+            printf("%d\t\t", matrix[row][columns]);
+        }
+        printf("\n");
+    }
+}
+
 int main(int argc, char *argv[]) {
     // Some logging
-    printf("Program started.\n");
+    printf("Block Data Structure - Program started.\n");
 
     // Declarations
-    char fileName = "indata.txt";
-    int size = 100;
-    int process_count, my_id;
+    char matrix1_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix1.txt";
+    char matrix2_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix2.txt";
+    int size, my_name_len, process_count, my_id, err, sum, sum0;
     char my_name[MPI_MAX_PROCESSOR_NAME];
-    int my_name_len;
-    int err;
     MPI_Status status;
-    float x[size], sum, sum0;
+    int matrix1[size][size], matrix2[size][size];
     int root = 0;
 
     // MPI Init
@@ -49,12 +87,18 @@ int main(int argc, char *argv[]) {
 
     // Read or get file content
     if (my_id == root) {
-        readFile(fileName, x, my_id);
-        printf("Process %d:\t\t\tThe file is closed.\n", my_id);
+        size = getLineCount(matrix1_file_name, my_id);
+        readFile(matrix1_file_name, size, &matrix1, my_id);
+        printf("Process %d:\t\t\tMatrix 1 is\n", my_id);
+        printMatrix(size, matrix1);
+        readFile(matrix2_file_name, size, &matrix2, my_id);
+        printf("Process %d:\t\t\tMatrix 2 is\n", my_id);
+        printMatrix(size, matrix2);
+        printf("Process %d:\t\t\tThe files are closed.\n", my_id);
 
         if (process_count > 1) {
             for (int i = 1; i < process_count; i++) {
-                err = MPI_Send(&x[i * slider], slider, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
+                err = MPI_Send(&matrix1[i * slider], slider, MPI_FLOAT, i, 0, MPI_COMM_WORLD);
                 if (err == 0) {
                     printf("Process %d:\t\t\tSend data to worker %d.\n", my_id, i);
                 } else {
@@ -67,7 +111,7 @@ int main(int argc, char *argv[]) {
             printf("Process %d:\t\t\tNo one to send data.\n", my_id);
         }
     } else {
-        err = MPI_Recv(&x[0], slider, MPI_FLOAT, root, 0, MPI_COMM_WORLD, &status);
+        err = MPI_Recv(&matrix1[0], slider, MPI_FLOAT, root, 0, MPI_COMM_WORLD, &status);
         if (err == 0) {
             printf("Process %d:\t\t\tReceived data from Master.\n", my_id);
         } else {
@@ -80,7 +124,7 @@ int main(int argc, char *argv[]) {
     printf("Process %d:\t\t\tStarted calculations.\n", my_id);
     sum = 0;
     for (int i = 0; i < slider; i++) {
-        sum += x[i];
+        sum += matrix1[i];
     }
     printf("Process %d:\t\t\tCalculations finished, My Sum=%f\n", my_id, sum);
 
