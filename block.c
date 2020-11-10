@@ -15,9 +15,7 @@ int main(int argc, char *argv[]) {
     // Declarations
     char matrix1_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix1.txt";
     char matrix2_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix2.txt";
-    //char matrix1_file_name[] = "matrix1.txt";
-    //char matrix2_file_name[] = "matrix2.txt";
-    int size, slider, my_name_len, process_count, my_id, err, sum, sum0;
+    int size, slider, my_name_len, process_count, my_id, err, result;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Status status;
     int root = 0;
@@ -62,7 +60,7 @@ int main(int argc, char *argv[]) {
     }
     printf("Process %d:\t\t\tMy slider: %d.\n", my_id, slider);
 
-    int matrix1[size][size], matrix2[size][size];
+    int matrix1[size][size], matrix2[size][size], final[size][size];
     if (my_id == root) {
         readFile(matrix1_file_name, size, &matrix1, my_id);
         printMatrix("Full Matrix 1 is", size, matrix1, my_id);
@@ -89,56 +87,56 @@ int main(int argc, char *argv[]) {
     MPI_Type_vector(size, block_size, size, MPI_INT, &matrix2_type);
     MPI_Type_commit(&matrix2_type);
 
-    if (my_id == root){
-        for(int i=1; i<process_count; i++){
-            err = MPI_Send(&matrix2[0][(i * block_size)], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
+    for(int count=0; count<size; count++) {
+        if (my_id == root) {
+            for (int i = 1; i < process_count; i++) {
+                err = MPI_Send(&matrix2[0][(i * block_size)], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
+                if (err == 0) {
+                    printf("Process %d:\t\t\tSend Vector 2 to workers.\n", my_id);
+                } else {
+                    printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to workers: %d.\n", my_id, err);
+                    exit(-1);
+                }
+            }
+
+            err = MPI_Sendrecv(&matrix2, 1, matrix2_type, root, 0, &my_matrix2, slider, MPI_INT, root, 0,
+                               MPI_COMM_WORLD, &status);
             if (err == 0) {
-                printf("Process %d:\t\t\tSend Vector 2 to workers.\n", my_id);
+                printf("Process %d:\t\t\tSend Vector 2 to Master.\n", my_id);
             } else {
-                printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to workers: %d.\n", my_id, err);
+                printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to Master: %d.\n", my_id, err);
+                exit(-1);
+            }
+        } else {
+            err = MPI_Recv(&my_matrix2, slider, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+            if (err == 0) {
+                printf("Process %d:\t\t\tReceived Vector 2 to workers.\n", my_id);
+            } else {
+                printf("Process %d:\t\t\t!!ERROR: Received Vector 2 from Master: %d.\n", my_id, err);
                 exit(-1);
             }
         }
+        printVector("Vector 2", slider, my_matrix2, my_id);
 
-        err = MPI_Sendrecv(&matrix2, 1, matrix2_type, root, 0, &my_matrix2, slider, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+        // Do the calculations
+        printf("Process %d:\t\t\tStarted calculations.\n", my_id);
+        result = 0;
+        for (int i = 0; i < slider; i++) {
+            result += (my_matrix1[i] * my_matrix2[i]);
+        }
+        printf("Process %d:\t\t\tCalculations finished, My Result=%d\n", my_id, result);
+
+        // Send or get the calculations.
+        err = MPI_Gather(&result, 1, MPI_INT, &final, 1, MPI_INT, root, MPI_COMM_WORLD);
         if (err == 0) {
-            printf("Process %d:\t\t\tSend Vector 2 to Master.\n", my_id);
+            printf("Process %d:\t\t\tGather result to master.\n", my_id);
         } else {
-            printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to Master: %d.\n", my_id, err);
+            printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);
             exit(-1);
         }
-    }
-    else{
-        err = MPI_Recv(&my_matrix2, slider, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
-        if (err == 0) {
-            printf("Process %d:\t\t\tReceived Vector 2 to workers.\n", my_id);
-        } else {
-            printf("Process %d:\t\t\t!!ERROR: Received Vector 2 from Master: %d.\n", my_id, err);
-            exit(-1);
-        }
-    }
-    printVector("Vector 2", slider, my_matrix2, my_id);
 
-    // Do the calculations
-    /*printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-    sum = 0;
-    for (int i = 0; i < slider; i++) {
-        sum += matrix1[i];
+        printMatrix("Final Matrix is", size, final, my_id);
     }
-    printf("Process %d:\t\t\tCalculations finished, My Sum=%f\n", my_id, sum);
-
-    // Send or get the calculations.
-    if (my_id == root) {
-        for (int i = 1; i < process_count; i++) {
-            MPI_Recv(&sum0, 1, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
-            printf("Process %d:\t\t\tReceived result from %d.\n", my_id, i);
-            sum += sum0;
-        }
-        printf("Process %d:\t\t\tTotal Sum=%f.\n", my_id, sum);
-    } else {
-        MPI_Send(&sum, 1, MPI_FLOAT, root, 0, MPI_COMM_WORLD);
-        printf("Process %d:\t\t\tSent result to Master.\n", my_id);
-    }*/
 
     MPI_Finalize();
 }
