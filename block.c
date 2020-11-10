@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     bool verbose = false;
     char matrix1_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix1.txt";
     char matrix2_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix2.txt";
-    int size, block_size, band_size, epochs, my_name_len, process_count, my_id, err, result;
+    int size, block_size, band_size, epochs, my_name_len, process_count, my_id, err;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Status status;
     int root = 0;
@@ -131,15 +131,17 @@ int main(int argc, char *argv[]) {
         if (verbose) printMatrix("My Matrix 2", block_size / size, size, my_matrix2, my_id);
 
         // Do the calculations
-        /*printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-        result = 0;
-        for (int i = 0; i < slider; i++) {
-            result += (my_matrix1[i] * my_matrix2[i]);
+        if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
+        int my_result[band_size];
+        for (int i = 0; i < band_size; i++) {
+            for (int j = 0; j < size; j++) {
+                my_result[i] += (my_matrix1[i][j] * my_matrix2[i][j]);
+            }
         }
-        printf("Process %d:\t\t\tCalculations finished, My Result=%d\n", my_id, result);
+        if (verbose) printVector("My Result", band_size, my_result, my_id);
 
         // Send or get the calculations.
-        err = MPI_Gather(&result, 1, MPI_INT, &final, 1, MPI_INT, root, MPI_COMM_WORLD);
+        /*err = MPI_Gather(&result, 1, MPI_INT, &final, 1, MPI_INT, root, MPI_COMM_WORLD);
         if (err == 0) {
             printf("Process %d:\t\t\tGather result to master.\n", my_id);
         } else {
