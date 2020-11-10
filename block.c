@@ -141,13 +141,11 @@ int main(int argc, char *argv[]) {
         if (verbose) printVector("My Result", band_size, my_result, my_id);
 
         // Send or get the calculations.
-        /*err = MPI_Gather(&result, 1, MPI_INT, &final, 1, MPI_INT, root, MPI_COMM_WORLD);
-        if (err == 0) {
-            printf("Process %d:\t\t\tGather result to master.\n", my_id);
-        } else {
+        err = MPI_Gather(&my_result, band_size, MPI_INT, &final, band_size, MPI_INT, root, MPI_COMM_WORLD);
+        if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);
             exit(-1);
-        }*/
+        }
 
         printMatrix("Final Matrix is", size, size, final, my_id);
     }
