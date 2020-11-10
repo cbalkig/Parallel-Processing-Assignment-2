@@ -1,2 +1,2 @@
-mpicc main.c -o main
-mpirun -np 2 ./main
+mpicc block.c -o block
+mpirun -np 2 ./block
