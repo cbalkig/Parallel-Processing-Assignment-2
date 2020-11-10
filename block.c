@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     }
     block_size = (size * size) / process_count;
     band_size = (size / process_count);
-    epochs = (process_count * process_count);
+    epochs = (size / band_size);
     printf("Process %d:\t\t\tMy size: %d\tBlock size: %d\tBand size: %d\tEpochs: %d.\n", my_id, size, block_size,
            band_size, epochs);
 
@@ -70,9 +70,10 @@ int main(int argc, char *argv[]) {
 
     //Run epochs
     for (int epoch = 1; epoch <= epochs; epoch++) {
+        printf("Process %d:\t\t\tEpoch: %d\n", my_id, epoch);
         // Split and then send & receive vectors
         int my_matrix1[block_size / size][size], my_matrix2[block_size / size][size];
-        int row = ((epoch - 1) / process_count) * band_size;
+        int row = (epoch - 1) * band_size;
         if (verbose) printf("Process %d:\t\t\tEpoch: %d. Row: %d\n", my_id, epoch, row);
 
         if (my_id == root) {
@@ -100,12 +101,14 @@ int main(int argc, char *argv[]) {
         if (verbose) printMatrix("My Matrix 1", block_size / size, size, my_matrix1, my_id);
 
         MPI_Datatype matrix2_type;
-        MPI_Type_vector(block_size, band_size, size, MPI_INT, &matrix2_type);
+        MPI_Type_vector(size, band_size, size, MPI_INT, &matrix2_type);
         MPI_Type_commit(&matrix2_type);
 
         if (my_id == root) {
             for (int i = 1; i < process_count; i++) {
-                err = MPI_Send(&matrix2[0][(i * band_size)], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
+                int col = (i * band_size);
+                if (verbose) printf("Process %d:\t\t\tEpoch: %d\tRow: %d\tCol: %d.\n", my_id, epoch, row, col);
+                err = MPI_Send(&matrix2[0][col], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to workers: %d.\n", my_id, err);
                     exit(-1);
@@ -125,7 +128,7 @@ int main(int argc, char *argv[]) {
                 exit(-1);
             }
         }
-        printMatrix("My Matrix 2", block_size / size, size, my_matrix2, my_id);
+        if (verbose) printMatrix("My Matrix 2", block_size / size, size, my_matrix2, my_id);
 
         // Do the calculations
         /*printf("Process %d:\t\t\tStarted calculations.\n", my_id);
