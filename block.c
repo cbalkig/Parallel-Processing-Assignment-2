@@ -50,11 +50,10 @@ int main(int argc, char *argv[]) {
         printf("Process %d:\t\t\t!!ERROR: Broadcast size to workers: %d.\n", my_id, err);
         exit(-1);
     }
-    printf("Process %d:\t\t\tMy size: %d.\n", my_id, size);
-
     slider = (size * size) / process_count;
     block_size = (slider / size);
-    epochs = block_size * block_size;
+    epochs = block_size;
+    printf("Process %d:\t\t\tMy size: %d\tSlider: %d\tBlock size: %d\tEpochs: %d.\n", my_id, size, slider, block_size, epochs);
 
     // Read matrix
     int matrix1[size][size], matrix2[size][size], final[size][size];
