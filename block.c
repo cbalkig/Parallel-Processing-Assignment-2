@@ -56,6 +56,15 @@ int main(int argc, char *argv[]) {
     printf("Process %d:\t\t\tMy size: %d\tBlock size: %d\tBand size: %d\tEpochs: %d.\n", my_id, size, block_size,
            band_size, epochs);
 
+    // MPI Custom Data Types
+    MPI_Datatype matrix2_type;
+    MPI_Type_vector(size, band_size, size, MPI_INT, &matrix2_type);
+    MPI_Type_commit(&matrix2_type);
+
+    MPI_Datatype final_type;
+    MPI_Type_vector(band_size, band_size, size, MPI_INT, &final_type);
+    MPI_Type_commit(&final_type);
+
     // Read matrix
     int matrix1[size][size], matrix2[size][size], final[size][size];
     if (my_id == root) {
@@ -100,10 +109,6 @@ int main(int argc, char *argv[]) {
         }
         if (verbose) printMatrix("My Matrix 1", block_size / size, size, my_matrix1, my_id);
 
-        MPI_Datatype matrix2_type;
-        MPI_Type_vector(size, band_size, size, MPI_INT, &matrix2_type);
-        MPI_Type_commit(&matrix2_type);
-
         if (my_id == root) {
             for (int i = 1; i < process_count; i++) {
                 int col = (i * band_size);
@@ -142,10 +147,6 @@ int main(int argc, char *argv[]) {
             }
         }
         printMatrix("My Result", band_size, band_size, my_result, my_id);
-
-        MPI_Datatype final_type;
-        MPI_Type_vector(band_size, band_size, size, MPI_INT, &final_type);
-        MPI_Type_commit(&final_type);
 
         // Send or get the calculations.
         int col = (my_id * band_size);
