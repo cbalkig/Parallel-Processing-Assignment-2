@@ -163,10 +163,30 @@ int main(int argc, char *argv[]) {
         printMatrix(log, band_width, band_width, my_result, my_id);
 
         // Send or get the calculations.
-        err = MPI_Gather(&my_result, band_width * band_width, MPI_INT, &final[row][col], 1, final_type, root, MPI_COMM_WORLD);
-        if (err != 0) {
-            printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);
-            exit(-1);
+        if (my_id == root) {
+            if (process_count > 1) {
+                for(int i=1; i<process_count; i++){
+                    int col = (i * band_width);
+                    err = MPI_Recv(&final[row][col], 1, final_type, i, 0, MPI_COMM_WORLD, &status);
+                    if (err != 0) {
+                        printf("Process %d:\t\t\t!!ERROR: Received result from worker: %d.\n", i, err);
+                        exit(-1);
+                    }
+                }
+            }
+
+            err = MPI_Sendrecv(&my_result, band_width * band_width, MPI_INT, root, 0, &final[row][0], 1, final_type, root, 0,
+                               MPI_COMM_WORLD, &status);
+            if (err != 0) {
+                printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
+                exit(-1);
+            }
+        } else {
+            err = MPI_Send(&my_result, band_width * band_width, MPI_INT, root, 0, MPI_COMM_WORLD);
+            if (err != 0) {
+                printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
+                exit(-1);
+            }
         }
     }
 
@@ -175,6 +195,10 @@ int main(int argc, char *argv[]) {
     }
 
     MPI_Finalize();
+
+    free(log);
+    free(matrix1_file_name);
+    free(matrix2_file_name);
 }
 
 int getLineCount(char name[], int my_id) {
@@ -228,6 +252,7 @@ void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][c
         sprintf(s, "%s\n", s);
     }
     printf("Process %d:\t\t\t%s", my_id, s);
+    free(s);
 }
 
 void printVector(char *id, int size, int vector[size], int my_id) {
@@ -238,4 +263,5 @@ void printVector(char *id, int size, int vector[size], int my_id) {
         sprintf(s, "%s%d\t\t", s, vector[row]);
     }
     printf("Process %d:\t\t\t%s\n", my_id, s);
+    free(s);
 }
