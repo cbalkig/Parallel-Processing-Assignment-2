@@ -1,2 +1,8 @@
+#!/bin/bash
 mpicc block.c -o block
-mpirun -np 8 ./block 8
+mpicc cyclic.c -o cyclic
+mpirun -np $1 ./$3 $2
+
+##example
+# ./matrix_mul.sh 2 4 block
+# ./matrix_mul.sh 2 4 cyclic
