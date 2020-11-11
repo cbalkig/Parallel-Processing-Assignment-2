@@ -19,11 +19,15 @@ int main(int argc, char *argv[]) {
     // Some logging
     printf("Block Data Structure - Program started.\n");
 
+    int size = atoi(argv[1]);
+
     // Declarations
     bool verbose = false;
-    char matrix1_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix1.txt";
-    char matrix2_file_name[] = "/Users/balki/CLionProjects/Assignment-1/matrix2.txt";
-    int size, block_size, band_size, epochs, my_name_len, process_count, my_id, err;
+    char *matrix1_file_name = (char *) malloc(1000 * sizeof(char));
+    char *matrix2_file_name = (char *) malloc(1000 * sizeof(char));
+    sprintf(matrix1_file_name, "%s%d%s", "/Users/balki/CLionProjects/Assignment-1/files/", size, "/matrix1.txt");
+    sprintf(matrix2_file_name, "%s%d%s", "/Users/balki/CLionProjects/Assignment-1/files/", size, "/matrix2.txt");
+    int block_size, band_size, epochs, my_name_len, process_count, my_id, err;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Status status;
     int root = 0;
@@ -150,7 +154,6 @@ int main(int argc, char *argv[]) {
 
         // Send or get the calculations.
         int col = (my_id * band_size);
-        printf("*******%d - %d\n", row, col);
         err = MPI_Gather(&my_result, band_size * band_size, MPI_INT, &final[row][col], 1, final_type, root, MPI_COMM_WORLD);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);

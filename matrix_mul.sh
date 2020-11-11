@@ -1,2 +1,2 @@
 mpicc block.c -o block
-mpirun -np 2 ./block
+mpirun -np 8 ./block 8
