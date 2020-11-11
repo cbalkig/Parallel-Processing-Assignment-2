@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     for (int epoch = 1; epoch <= epochs; epoch++) {
         printf("Process %d:\t\t\tEpoch: %d\n", my_id, epoch);
         // Split and then send & receive vectors
-        int my_matrix1[block_size / size][size], my_matrix2[block_size / size][size];
+        int my_matrix1[block_size / size][size], my_matrix2[size][block_size / size];
         int row = (epoch - 1) * band_size;
         if (verbose) printf("Process %d:\t\t\tEpoch: %d. Row: %d\n", my_id, epoch, row);
 
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
                 exit(-1);
             }
         }
-        if (verbose) printMatrix("My Matrix 2", block_size / size, size, my_matrix2, my_id);
+        if (verbose) printMatrix("My Matrix 2", size, block_size / size, my_matrix2, my_id);
 
         // Do the calculations
         if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < band_size; j++) {
                 my_result[i][j] = 0;
                 for (int k = 0; k < size; k++) {
-                    my_result[i][j] += (my_matrix1[i][k] * my_matrix2[j][k]);
+                    my_result[i][j] += (my_matrix1[i][k] * my_matrix2[k][j]);
                 }
             }
         }
@@ -150,6 +150,7 @@ int main(int argc, char *argv[]) {
 
         // Send or get the calculations.
         int col = (my_id * band_size);
+        printf("*******%d - %d\n", row, col);
         err = MPI_Gather(&my_result, band_size * band_size, MPI_INT, &final[row][col], 1, final_type, root, MPI_COMM_WORLD);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);
