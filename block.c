@@ -132,21 +132,31 @@ int main(int argc, char *argv[]) {
 
         // Do the calculations
         if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-        int my_result[band_size];
+        int my_result[band_size][band_size];
         for (int i = 0; i < band_size; i++) {
-            for (int j = 0; j < size; j++) {
-                my_result[i] += (my_matrix1[i][j] * my_matrix2[i][j]);
+            for (int j = 0; j < band_size; j++) {
+                my_result[i][j] = 0;
+                for (int k = 0; k < size; k++) {
+                    my_result[i][j] += (my_matrix1[i][k] * my_matrix2[j][k]);
+                }
             }
         }
-        if (verbose) printVector("My Result", band_size, my_result, my_id);
+        printMatrix("My Result", band_size, band_size, my_result, my_id);
+
+        MPI_Datatype final_type;
+        MPI_Type_vector(band_size, band_size, size, MPI_INT, &final_type);
+        MPI_Type_commit(&final_type);
 
         // Send or get the calculations.
-        err = MPI_Gather(&my_result, band_size, MPI_INT, &final, band_size, MPI_INT, root, MPI_COMM_WORLD);
+        int col = (my_id * band_size);
+        err = MPI_Gather(&my_result, band_size * band_size, MPI_INT, &final[row][col], 1, final_type, root, MPI_COMM_WORLD);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);
             exit(-1);
         }
+    }
 
+    if(my_id == root) {
         printMatrix("Final Matrix is", size, size, final, my_id);
     }
 
