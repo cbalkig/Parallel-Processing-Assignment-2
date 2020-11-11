@@ -25,9 +25,10 @@ int main(int argc, char *argv[]) {
     bool verbose = false;
     char *matrix1_file_name = (char *) malloc(1000 * sizeof(char));
     char *matrix2_file_name = (char *) malloc(1000 * sizeof(char));
+    char *log = (char *) malloc(200 * sizeof(char));
     sprintf(matrix1_file_name, "%s%d%s", "/Users/balki/CLionProjects/Assignment-1/files/", size, "/matrix1.txt");
     sprintf(matrix2_file_name, "%s%d%s", "/Users/balki/CLionProjects/Assignment-1/files/", size, "/matrix2.txt");
-    int block_size, band_size, epochs, my_name_len, process_count, my_id, err;
+    int block_size, band_width, band_count, epochs, my_name_len, process_count, my_id, err;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Status status;
     int root = 0;
@@ -55,18 +56,19 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
     block_size = (size * size) / process_count;
-    band_size = (size / process_count);
-    epochs = (size / band_size);
-    printf("Process %d:\t\t\tMy size: %d\tBlock size: %d\tBand size: %d\tEpochs: %d.\n", my_id, size, block_size,
-           band_size, epochs);
+    band_width = (size / process_count);
+    epochs = (size / band_width);
+    band_count = process_count;
+    printf("Process %d:\t\t\tMy size: %d\tBlock size: %d\tBand width: %d\tBand count: %d\tEpochs: %d.\n", my_id, size, block_size,
+           band_width, band_count, epochs);
 
     // MPI Custom Data Types
     MPI_Datatype matrix2_type;
-    MPI_Type_vector(size, band_size, size, MPI_INT, &matrix2_type);
+    MPI_Type_vector(size, band_width, size, MPI_INT, &matrix2_type);
     MPI_Type_commit(&matrix2_type);
 
     MPI_Datatype final_type;
-    MPI_Type_vector(band_size, band_size, size, MPI_INT, &final_type);
+    MPI_Type_vector(band_width, band_width, size, MPI_INT, &final_type);
     MPI_Type_commit(&final_type);
 
     // Read matrix
@@ -83,12 +85,9 @@ int main(int argc, char *argv[]) {
 
     //Run epochs
     for (int epoch = 1; epoch <= epochs; epoch++) {
-        printf("Process %d:\t\t\tEpoch: %d\n", my_id, epoch);
         // Split and then send & receive vectors
         int my_matrix1[block_size / size][size], my_matrix2[size][block_size / size];
-        int row = (epoch - 1) * band_size;
-        if (verbose) printf("Process %d:\t\t\tEpoch: %d. Row: %d\n", my_id, epoch, row);
-
+        int row = (epoch - 1) * band_width;
         if (my_id == root) {
             for (int i = 1; i < process_count; i++) {
                 err = MPI_Send(&matrix1[row], block_size, MPI_INT, i, 0, MPI_COMM_WORLD);
@@ -111,12 +110,15 @@ int main(int argc, char *argv[]) {
                 exit(-1);
             }
         }
-        if (verbose) printMatrix("My Matrix 1", block_size / size, size, my_matrix1, my_id);
+        if (verbose) {
+            log = (char *) malloc(200 * sizeof(char));
+            sprintf(log, "My Matrix 1 (Epoch: %d\tRow: %d)", epoch, row);
+            printMatrix(log, block_size / size, size, my_matrix1, my_id);
+        }
 
         if (my_id == root) {
             for (int i = 1; i < process_count; i++) {
-                int col = (i * band_size);
-                if (verbose) printf("Process %d:\t\t\tEpoch: %d\tRow: %d\tCol: %d.\n", my_id, epoch, row, col);
+                int col = (i * band_width);
                 err = MPI_Send(&matrix2[0][col], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to workers: %d.\n", my_id, err);
@@ -137,24 +139,31 @@ int main(int argc, char *argv[]) {
                 exit(-1);
             }
         }
-        if (verbose) printMatrix("My Matrix 2", size, block_size / size, my_matrix2, my_id);
+        if (verbose) {
+            log = (char *) malloc(200 * sizeof(char));
+            sprintf(log, "My Matrix 2 (Epoch: %d\tRow: %d)", epoch, row);
+            printMatrix(log, size, block_size / size, my_matrix2, my_id);
+        }
 
         // Do the calculations
         if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-        int my_result[band_size][band_size];
-        for (int i = 0; i < band_size; i++) {
-            for (int j = 0; j < band_size; j++) {
+        int my_result[band_width][band_width];
+        for (int i = 0; i < band_width; i++) {
+            for (int j = 0; j < band_width; j++) {
                 my_result[i][j] = 0;
                 for (int k = 0; k < size; k++) {
                     my_result[i][j] += (my_matrix1[i][k] * my_matrix2[k][j]);
                 }
             }
         }
-        printMatrix("My Result", band_size, band_size, my_result, my_id);
+
+        int col = (my_id * band_width);
+        log = (char *) malloc(200 * sizeof(char));
+        sprintf(log, "My Result (Row: %d\tCol: %d)", row, col);
+        printMatrix(log, band_width, band_width, my_result, my_id);
 
         // Send or get the calculations.
-        int col = (my_id * band_size);
-        err = MPI_Gather(&my_result, band_size * band_size, MPI_INT, &final[row][col], 1, final_type, root, MPI_COMM_WORLD);
+        err = MPI_Gather(&my_result, band_width * band_width, MPI_INT, &final[row][col], 1, final_type, root, MPI_COMM_WORLD);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Gather result to master: %d.\n", my_id, err);
             exit(-1);
@@ -209,7 +218,7 @@ void readFile(char name[], int size, int x[size][size], int my_id) {
 }
 
 void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][columnCount], int my_id) {
-    char *s = (char *) malloc(100 * sizeof(char));
+    char *s = (char *) malloc(1000 * sizeof(char));
     sprintf(s, "%s\n", id);
     for (int row = 0; row < rowCount; row++) {
         sprintf(s, "%s\t\t\t\t\t", s);
@@ -222,7 +231,7 @@ void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][c
 }
 
 void printVector(char *id, int size, int vector[size], int my_id) {
-    char *s = (char *) malloc(100 * sizeof(char));
+    char *s = (char *) malloc(1000 * sizeof(char));
     sprintf(s, "%s\n", id);
     sprintf(s, "%s\t\t\t\t\t", s);
     for (int row = 0; row < size; row++) {
