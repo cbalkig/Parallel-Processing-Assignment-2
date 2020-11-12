@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     int size = atoi(argv[1]);
 
     // Declarations
-    bool verbose = true;
+    bool verbose = false;
     char *matrix1_file_name = (char *) malloc(1000 * sizeof(char));
     char *matrix2_file_name = (char *) malloc(1000 * sizeof(char));
     char *log = (char *) malloc(200 * sizeof(char));
