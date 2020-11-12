@@ -172,6 +172,7 @@ int main(int argc, char *argv[]) {
                 printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
                 exit(-1);
             }
+            printMatrix("Final Matrix is", size, size, final, my_id);
         } else {
             err = MPI_Send(&my_result, 1, MPI_INT, root, 0, MPI_COMM_WORLD);
             if (err != 0) {
