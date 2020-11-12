@@ -58,13 +58,8 @@ int main(int argc, char *argv[]) {
     epochs = (size * size * size / process_count);
     printf("Process %d:\t\t\tMy size: %d\tEpochs: %d.\n", my_id, size, epochs);
 
-    // MPI Custom Data Types
-    MPI_Datatype matrix2_type;
-    MPI_Type_vector(size, 1, size, MPI_INT, &matrix2_type);
-    MPI_Type_commit(&matrix2_type);
-
     // Read matrix
-    int matrix1[size][size], matrix2[size][size], final[size][size];
+    int matrix1[size][size], matrix2[size][size], final[size][size], buffer[size / process_count];
     for (int i=0; i<size; i++){
         for (int j=0; j<size; j++){
             final[i][j] = 0;
@@ -84,20 +79,19 @@ int main(int argc, char *argv[]) {
     //Run epochs
     for (int epoch = 1; epoch <= epochs; epoch++) {
         // Split and then send & receive vectors
-        int my_value1;
-        int my_vector2[size];
-        int row = (epoch - 1) / ((size / process_count) * size);
-        int col = ((epoch - 1) * process_count) % size;
+        int my_value1, my_value2;
+        int row1 = (epoch - 1) / ((size / process_count) * size);
+        int col1 = ((epoch - 1) * process_count) % size;
         if (my_id == root) {
             for (int i = 1; i < process_count; i++) {
-                err = MPI_Send(&matrix1[row][col + i], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+                err = MPI_Send(&matrix1[row1][col1 + i], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Send Vector 1 to workers: %d.\n", my_id, err);
                     exit(-1);
                 }
             }
 
-            err = MPI_Sendrecv(&matrix1[row][col], 1, MPI_INT, root, 0, &my_value1, 1, MPI_INT, root, 0,
+            err = MPI_Sendrecv(&matrix1[row1][col1], 1, MPI_INT, root, 0, &my_value1, 1, MPI_INT, root, 0,
                                MPI_COMM_WORLD, &status);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Send Value 1 to Master: %d.\n", my_id, err);
@@ -114,76 +108,64 @@ int main(int argc, char *argv[]) {
             printf("Process %d:\t\t\tMy Value 1: %d (Epoch: %d)\n", my_id, my_value1, epoch);
         }
 
-        row = ((epoch - 1) % (size * (size / process_count))) / (size / process_count);
+        int row2 = ((epoch - 1) % (size / process_count)) * (size / process_count);
+        int col2 = ((epoch - 1) / (size / process_count)) % size;
         if (my_id == root) {
             for (int i = 1; i < process_count; i++) {
-                err = MPI_Send(&matrix2[0][row], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
+                err = MPI_Send(&matrix2[row2 + i][col2], 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to workers: %d.\n", my_id, err);
                     exit(-1);
                 }
             }
 
-            err = MPI_Sendrecv(&matrix2[0][row], 1, matrix2_type, root, 0, &my_vector2, size, MPI_INT, root, 0,
+            err = MPI_Sendrecv(&matrix2[row2][col2], 1, MPI_INT, root, 0, &my_value2, size, MPI_INT, root, 0,
                                MPI_COMM_WORLD, &status);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to Master: %d.\n", my_id, err);
                 exit(-1);
             }
         } else {
-            err = MPI_Recv(&my_vector2, size, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+            err = MPI_Recv(&my_value2, size, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Received Vector 2 from Master: %d.\n", my_id, err);
                 exit(-1);
             }
         }
         if (verbose) {
-            log = (char *) malloc(200 * sizeof(char));
-            sprintf(log, "My Vector 2 (Epoch: %d\tRow: %d)", epoch, row);
-            printVector(log, size, my_vector2, my_id);
+            printf("Process %d:\t\t\tMy Value 2: %d (Epoch: %d)\n", my_id, my_value2, epoch);
         }
 
         // Do the calculations
         if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-        int my_result = 0;
-        for (int i = 0; i < size; i++) {
-            my_result += (my_value1 * my_vector2[i]);
+        int my_result = my_value1 * my_value2;
+        if (verbose) printf("Process %d:\t\t\tMy Result: %d (Epoch: %d)\n", my_id, my_result, epoch);
+
+        // Reduce the calculations.
+        err = MPI_Reduce(&my_result, &buffer[(epoch - 1) % (size / process_count)], 1, MPI_INT, MPI_SUM, root, MPI_COMM_WORLD);
+        if (err != 0) {
+            printf("Process %d:\t\t\t!!ERROR: Received result from worker.\n", err);
+            exit(-1);
         }
 
-        // Send or get the calculations.
-        if (my_id == root) {
-            int row = (epoch - 1) / ((size / process_count) * size);
-            int col = ((epoch - 1) % (size * (size / process_count))) / (size / process_count);
-
-            if (process_count > 1) {
-                for(int i=1; i<process_count; i++){
-                    err = MPI_Recv(&final[row][col], 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status);
-                    if (err != 0) {
-                        printf("Process %d:\t\t\t!!ERROR: Received result from worker: %d.\n", i, err);
-                        exit(-1);
-                    }
-                    printMatrix("Final Matrix is", size, size, final, my_id);
+        if(my_id == root) {
+            if ((epoch % (size / process_count)) == 0) {
+                if(verbose){
+                    log = (char *) malloc(200 * sizeof(char));
+                    sprintf(log, "Buffer (Epoch: %d)", epoch);
+                    printVector(log, (size / process_count), buffer, my_id);
                 }
-            }
 
-            err = MPI_Sendrecv(&my_result, 1, MPI_INT, root, 0, &final[row][col], 1, MPI_INT, root, 0,
-                               MPI_COMM_WORLD, &status);
-            if (err != 0) {
-                printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
-                exit(-1);
-            }
-            printMatrix("Final Matrix is", size, size, final, my_id);
-        } else {
-            err = MPI_Send(&my_result, 1, MPI_INT, root, 0, MPI_COMM_WORLD);
-            if (err != 0) {
-                printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
-                exit(-1);
+                int row = (epoch - 1) / ((size / process_count) * size);
+                int col = ((epoch - 1) / (size / process_count)) % size;
+
+                for (int i = 0; i < (size / process_count); i++) {
+                    final[row][col] += buffer[i];
+                }
+
+                printMatrix("Final Matrix is", size, size, final, my_id);
             }
         }
-    }
-
-    if(my_id == root) {
-        printMatrix("Final Matrix is", size, size, final, my_id);
     }
 
     MPI_Finalize();
