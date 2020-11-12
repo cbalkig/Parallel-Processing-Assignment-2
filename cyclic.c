@@ -63,12 +63,14 @@ int main(int argc, char *argv[]) {
     MPI_Type_vector(size, 1, size, MPI_INT, &matrix2_type);
     MPI_Type_commit(&matrix2_type);
 
-    MPI_Datatype final_type;
-    MPI_Type_vector(size / process_count, 1, size, MPI_INT, &final_type);
-    MPI_Type_commit(&final_type);
-
     // Read matrix
     int matrix1[size][size], matrix2[size][size], final[size][size];
+    for (int i=0; i<size; i++){
+        for (int j=0; j<size; j++){
+            final[i][j] = 0;
+        }
+    }
+
     if (my_id == root) {
         readFile(matrix1_file_name, size, &matrix1, my_id);
         printMatrix("Full Matrix 1 is", size, size, matrix1, my_id);
@@ -142,36 +144,41 @@ int main(int argc, char *argv[]) {
         }
 
         // Do the calculations
-        /*if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-        int my_result = my_value1 * my_value2;
-        printf("My Result (Row: %d\tCol: %d) = %d", row, col, my_result);
+        if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
+        int my_result = 0;
+        for (int i = 0; i < size; i++) {
+            my_result += (my_value1 * my_vector2[i]);
+        }
 
         // Send or get the calculations.
         if (my_id == root) {
+            int row = (epoch - 1) / ((size / process_count) * size);
+            int col = ((epoch - 1) % (size * (size / process_count))) / (size / process_count);
+
             if (process_count > 1) {
                 for(int i=1; i<process_count; i++){
-                    int col = (i * band_width);
-                    err = MPI_Recv(&final[row][col], 1, final_type, i, 0, MPI_COMM_WORLD, &status);
+                    err = MPI_Recv(&final[row][col], 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status);
                     if (err != 0) {
                         printf("Process %d:\t\t\t!!ERROR: Received result from worker: %d.\n", i, err);
                         exit(-1);
                     }
+                    printMatrix("Final Matrix is", size, size, final, my_id);
                 }
             }
 
-            err = MPI_Sendrecv(&my_result, band_width * band_width, MPI_INT, root, 0, &final[row][0], 1, final_type, root, 0,
+            err = MPI_Sendrecv(&my_result, 1, MPI_INT, root, 0, &final[row][col], 1, MPI_INT, root, 0,
                                MPI_COMM_WORLD, &status);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
                 exit(-1);
             }
         } else {
-            err = MPI_Send(&my_result, band_width * band_width, MPI_INT, root, 0, MPI_COMM_WORLD);
+            err = MPI_Send(&my_result, 1, MPI_INT, root, 0, MPI_COMM_WORLD);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
                 exit(-1);
             }
-        }*/
+        }
     }
 
     if(my_id == root) {
