@@ -8,6 +8,10 @@
 #include <string.h>
 #include "common.c"
 
+int getMatrixARow(int i, int count, int size);
+
+int getMatrixBCol(int i, int count, int size);
+
 int main(int argc, char *argv[]) {
     // Some logging
     printf("Block Data Structure - Program started.\n");
@@ -17,7 +21,7 @@ int main(int argc, char *argv[]) {
     char *matrixA_file_name = (char *) malloc(1000 * sizeof(char));
     char *matrixB_file_name = (char *) malloc(1000 * sizeof(char));
     char *log = (char *) malloc(200 * sizeof(char));
-    int block_size, my_name_len, process_count, my_id, err;
+    int block_size, my_name_len, process_count, my_id, err, row, col;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Status status;
     int root = 0;
@@ -76,7 +80,7 @@ int main(int argc, char *argv[]) {
     int my_matrixA[block_size][N], my_matrixB[N][block_size];
     if (my_id == root) {
         for (int i = 1; i < process_count; i++) {
-            int row = (i / (process_count / 2)) * block_size;
+            row = getMatrixARow(i, process_count, block_size);
             err = MPI_Send(&matrixA[row], block_size * N, MPI_INT, i, 0, MPI_COMM_WORLD);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Send Matrix A to workers: %d.\n", my_id, err);
@@ -84,7 +88,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        int row = (my_id / (process_count / 2)) * block_size;
+        row = getMatrixARow(my_id, process_count, block_size);
         err = MPI_Sendrecv(&matrixA[row], block_size * N, MPI_INT, root, 0, &my_matrixA, block_size * N, MPI_INT, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
@@ -105,7 +109,7 @@ int main(int argc, char *argv[]) {
 
     if (my_id == root) {
         for (int i = 1; i < process_count; i++) {
-            int col = (i % (process_count / 2)) * block_size;
+            col = getMatrixBCol(i, process_count, block_size);
             err = MPI_Send(&matrixB[0][col], 1, matrixB_type, i, 0, MPI_COMM_WORLD);
             if (err != 0) {
                 printf("Process %d:\t\t\t!!ERROR: Send Matrix B to workers: %d.\n", my_id, err);
@@ -113,7 +117,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        err = MPI_Sendrecv(&matrixB, 1, matrixB_type, root, 0, &my_matrixB, block_size * N, MPI_INT, root, 0,
+        col = getMatrixBCol(my_id, process_count, block_size);
+        err = MPI_Sendrecv(&matrixB[0][col], 1, matrixB_type, root, 0, &my_matrixB, block_size * N, MPI_INT, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send Matrix B to Master: %d.\n", my_id, err);
@@ -143,8 +148,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int row = (my_id / (process_count / 2)) * block_size;
-    int col = (my_id % (process_count / 2)) * block_size;
+    row = getMatrixARow(my_id, process_count, block_size);
+    col = getMatrixBCol(my_id, process_count, block_size);
     log = (char *) malloc(200 * sizeof(char));
     sprintf(log, "My Result (Row: %d\tCol: %d)", row, col);
     printMatrix(log, block_size, block_size, my_result, my_id);
@@ -153,8 +158,8 @@ int main(int argc, char *argv[]) {
     if (my_id == root) {
         if (process_count > 1) {
             for(int i=1; i<process_count; i++){
-                int row = (i / (process_count / 2)) * block_size;
-                int col = (i % (process_count / 2)) * block_size;
+                row = getMatrixARow(i, process_count, block_size);
+                col = getMatrixBCol(i, process_count, block_size);
                 err = MPI_Recv(&matrixC[row][col], 1, matrixC_type, i, 0, MPI_COMM_WORLD, &status);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Received result from worker: %d.\n", i, err);
@@ -163,8 +168,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        int row = (my_id / (process_count / 2)) * block_size;
-        int col = (my_id % (process_count / 2)) * block_size;
+        row = getMatrixARow(my_id, process_count, block_size);
+        col = getMatrixBCol(my_id, process_count, block_size);
         err = MPI_Sendrecv(&my_result, block_size * block_size, MPI_INT, root, 0, &matrixC[row][col], 1, matrixC_type, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
@@ -190,5 +195,10 @@ int main(int argc, char *argv[]) {
     free(matrixB_file_name);
 }
 
+int getMatrixARow(int i, int process_count, int block_size) {
+    return (i / (process_count / 2)) * block_size;
+}
 
-
+int getMatrixBCol(int i, int process_count, int block_size) {
+    return (i % (process_count / 2)) * block_size;
+}
