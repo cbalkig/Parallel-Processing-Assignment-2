@@ -103,7 +103,6 @@ int main(int argc, char *argv[]) {
         }
     }
     if (verbose) {
-        log = (char *) malloc(200 * sizeof(char));
         printMatrix("My Matrix A", block_size, N, my_matrixA, my_id);
     }
 
@@ -132,7 +131,6 @@ int main(int argc, char *argv[]) {
         }
     }
     if (verbose) {
-        log = (char *) malloc(200 * sizeof(char));
         printMatrix("My Matrix B", N, block_size, my_matrixB, my_id);
     }
 
