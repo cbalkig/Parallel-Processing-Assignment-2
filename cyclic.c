@@ -56,11 +56,11 @@ int main(int argc, char *argv[]) {
     MPI_Type_commit(&matrixA_type);
 
     MPI_Datatype matrixB_type;
-    MPI_Type_vector(N * N * 2 / process_count, 1, process_count, MPI_INT, &matrixB_type);
+    MPI_Type_vector(N * N * 2 / process_count, 1, process_count / 2, MPI_INT, &matrixB_type);
     MPI_Type_commit(&matrixB_type);
 
     MPI_Datatype matrixC_type;
-    MPI_Type_vector(1, 1, N, MPI_INT, &matrixC_type);
+    MPI_Type_vector(N / (process_count / 2), 1, process_count / 2, MPI_INT, &matrixC_type);
     MPI_Type_commit(&matrixC_type);
 
     // Read matrix
