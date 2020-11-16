@@ -52,11 +52,11 @@ int main(int argc, char *argv[]) {
     }
 
     // MPI Custom Data Types
-    /*MPI_Datatype matrix2_type;
-    MPI_Type_vector(N, band_width, N, MPI_INT, &matrix2_type);
-    MPI_Type_commit(&matrix2_type);
+    MPI_Datatype matrixB_type;
+    MPI_Type_vector(N, block_size, N, MPI_INT, &matrixB_type);
+    MPI_Type_commit(&matrixB_type);
 
-    MPI_Datatype final_type;
+    /*MPI_Datatype final_type;
     MPI_Type_vector(band_width, band_width, N, MPI_INT, &final_type);
     MPI_Type_commit(&final_type);*/
 
@@ -103,54 +103,54 @@ int main(int argc, char *argv[]) {
         printMatrix("My Matrix A", block_size, N, my_matrixA, my_id);
     }
 
-    /*if (my_id == root) {
+    if (my_id == root) {
         for (int i = 1; i < process_count; i++) {
-            int col = (i * band_width);
-            err = MPI_Send(&matrix2[0][col], 1, matrix2_type, i, 0, MPI_COMM_WORLD);
+            int col = (i % (process_count / 2)) * block_size;
+            err = MPI_Send(&matrixB[0][col], 1, matrixB_type, i, 0, MPI_COMM_WORLD);
             if (err != 0) {
-                printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to workers: %d.\n", my_id, err);
+                printf("Process %d:\t\t\t!!ERROR: Send Matrix B to workers: %d.\n", my_id, err);
                 exit(-1);
             }
         }
 
-        err = MPI_Sendrecv(&matrix2, 1, matrix2_type, root, 0, &my_matrix2, block_size, MPI_INT, root, 0,
+        err = MPI_Sendrecv(&matrixB, 1, matrixB_type, root, 0, &my_matrixB, block_size * N, MPI_INT, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
-            printf("Process %d:\t\t\t!!ERROR: Send Vector 2 to Master: %d.\n", my_id, err);
+            printf("Process %d:\t\t\t!!ERROR: Send Matrix B to Master: %d.\n", my_id, err);
             exit(-1);
         }
     } else {
-        err = MPI_Recv(&my_matrix2, block_size, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+        err = MPI_Recv(&my_matrixB, block_size * N, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
         if (err != 0) {
-            printf("Process %d:\t\t\t!!ERROR: Received Vector 2 from Master: %d.\n", my_id, err);
+            printf("Process %d:\t\t\t!!ERROR: Received Matrix B from Master: %d.\n", my_id, err);
             exit(-1);
         }
     }
     if (verbose) {
         log = (char *) malloc(200 * sizeof(char));
-        sprintf(log, "My Matrix 2 (Epoch: %d\tRow: %d)", epoch, row);
-        printMatrix(log, size, block_size / size, my_matrix2, my_id);
+        printMatrix("My Matrix B", N, block_size, my_matrixB, my_id);
     }
 
     // Do the calculations
     if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-    int my_result[band_width][band_width];
-    for (int i = 0; i < band_width; i++) {
-        for (int j = 0; j < band_width; j++) {
+    int my_result[block_size][block_size];
+    for (int i = 0; i < block_size; i++) {
+        for (int j = 0; j < block_size; j++) {
             my_result[i][j] = 0;
-            for (int k = 0; k < size; k++) {
-                my_result[i][j] += (my_matrix1[i][k] * my_matrix2[k][j]);
+            for (int k = 0; k < N; k++) {
+                my_result[i][j] += (my_matrixA[i][k] * my_matrixB[k][j]);
             }
         }
     }
 
-    int col = (my_id * band_width);
+    int row = (my_id / (process_count / 2)) * block_size;
+    int col = (my_id % (process_count / 2)) * block_size;
     log = (char *) malloc(200 * sizeof(char));
     sprintf(log, "My Result (Row: %d\tCol: %d)", row, col);
-    printMatrix(log, band_width, band_width, my_result, my_id);
+    printMatrix(log, block_size, block_size, my_result, my_id);
 
     // Send or get the calculations.
-    if (my_id == root) {
+    /*if (my_id == root) {
         if (process_count > 1) {
             for(int i=1; i<process_count; i++){
                 int col = (i * band_width);
