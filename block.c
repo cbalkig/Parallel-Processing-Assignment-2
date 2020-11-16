@@ -56,9 +56,9 @@ int main(int argc, char *argv[]) {
     MPI_Type_vector(N, block_size, N, MPI_INT, &matrixB_type);
     MPI_Type_commit(&matrixB_type);
 
-    /*MPI_Datatype final_type;
-    MPI_Type_vector(band_width, band_width, N, MPI_INT, &final_type);
-    MPI_Type_commit(&final_type);*/
+    MPI_Datatype matrixC_type;
+    MPI_Type_vector(block_size, block_size, N, MPI_INT, &matrixC_type);
+    MPI_Type_commit(&matrixC_type);
 
     // Read matrix
     int matrixA[N][N], matrixB[N][N], matrixC[N][N];
@@ -150,11 +150,12 @@ int main(int argc, char *argv[]) {
     printMatrix(log, block_size, block_size, my_result, my_id);
 
     // Send or get the calculations.
-    /*if (my_id == root) {
+    if (my_id == root) {
         if (process_count > 1) {
             for(int i=1; i<process_count; i++){
-                int col = (i * band_width);
-                err = MPI_Recv(&final[row][col], 1, final_type, i, 0, MPI_COMM_WORLD, &status);
+                int row = (i / (process_count / 2)) * block_size;
+                int col = (i % (process_count / 2)) * block_size;
+                err = MPI_Recv(&matrixC[row][col], 1, matrixC_type, i, 0, MPI_COMM_WORLD, &status);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Received result from worker: %d.\n", i, err);
                     exit(-1);
@@ -162,14 +163,16 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        err = MPI_Sendrecv(&my_result, band_width * band_width, MPI_INT, root, 0, &final[row][0], 1, final_type, root, 0,
+        int row = (my_id / (process_count / 2)) * block_size;
+        int col = (my_id % (process_count / 2)) * block_size;
+        err = MPI_Sendrecv(&my_result, block_size * block_size, MPI_INT, root, 0, &matrixC[row][col], 1, matrixC_type, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
             exit(-1);
         }
     } else {
-        err = MPI_Send(&my_result, band_width * band_width, MPI_INT, root, 0, MPI_COMM_WORLD);
+        err = MPI_Send(&my_result, block_size * block_size, MPI_INT, root, 0, MPI_COMM_WORLD);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
             exit(-1);
@@ -177,8 +180,8 @@ int main(int argc, char *argv[]) {
     }
 
     if(my_id == root) {
-        printMatrix("Final Matrix is", size, size, final, my_id);
-    }*/
+        printMatrix("Matrix C is", N, N, matrixC, my_id);
+    }
 
     MPI_Finalize();
 
