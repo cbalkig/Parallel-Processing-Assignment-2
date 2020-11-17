@@ -50,17 +50,22 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
+    int half_process_count = process_count / 2;
+    int bant_count = N / half_process_count;
+
     // MPI Custom Data Types
     MPI_Datatype matrixA_type;
-    MPI_Type_vector(N / (process_count / 2), N, N * (process_count / 2), MPI_INT, &matrixA_type);
+    MPI_Type_vector(bant_count, N, N * half_process_count, MPI_INT, &matrixA_type);
     MPI_Type_commit(&matrixA_type);
 
     MPI_Datatype matrixB_type;
-    MPI_Type_vector(N * N * 2 / process_count, 1, process_count / 2, MPI_INT, &matrixB_type);
+    MPI_Type_vector(N * bant_count, 1, half_process_count, MPI_INT, &matrixB_type);
     MPI_Type_commit(&matrixB_type);
 
     MPI_Datatype matrixC_type;
-    MPI_Type_vector(N / (process_count / 2), 1, process_count / 2, MPI_INT, &matrixC_type);
+    int lengths[4] = { 1, 1, 1, 1 };
+    int displacements[4] = { 0, half_process_count, bant_count * N, bant_count * N + half_process_count};
+    MPI_Type_indexed(bant_count * bant_count, lengths, displacements, MPI_INT, &matrixC_type);
     MPI_Type_commit(&matrixC_type);
 
     // Read matrix
@@ -76,7 +81,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Split and then send & receive vectors
-    int my_matrixA[N / (process_count / 2)][N], my_matrixB[N][N / (process_count / 2)];
+    int my_matrixA[bant_count][N], my_matrixB[N][bant_count];
     if (my_id == root) {
         for (int i = 1; i < process_count; i++) {
             row = getMatrixARow(i, process_count, 1);
@@ -88,21 +93,21 @@ int main(int argc, char *argv[]) {
         }
 
         row = getMatrixARow(my_id, process_count, 1);
-        err = MPI_Sendrecv(&matrixA[row], 1, matrixA_type, root, 0, &my_matrixA, N * N * 2 / process_count, MPI_INT, root, 0,
+        err = MPI_Sendrecv(&matrixA[row], 1, matrixA_type, root, 0, &my_matrixA, N * bant_count, MPI_INT, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send Matrix A to Master: %d.\n", my_id, err);
             exit(-1);
         }
     } else {
-        err = MPI_Recv(&my_matrixA, N * N * 2/ process_count, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+        err = MPI_Recv(&my_matrixA, N * bant_count, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Received Matrix A from Master: %d.\n", my_id, err);
             exit(-1);
         }
     }
     if (verbose) {
-        printMatrix("My Matrix A", N / (process_count / 2), N, my_matrixA, my_id);
+        printMatrix("My Matrix A", bant_count, N, my_matrixA, my_id);
     }
 
     if (my_id == root) {
@@ -116,28 +121,28 @@ int main(int argc, char *argv[]) {
         }
 
         col = getMatrixBCol(my_id, process_count, 1);
-        err = MPI_Sendrecv(&matrixB[0][col], 1, matrixB_type, root, 0, &my_matrixB, N * N * 2/ process_count, MPI_INT, root, 0,
+        err = MPI_Sendrecv(&matrixB[0][col], 1, matrixB_type, root, 0, &my_matrixB, N * bant_count, MPI_INT, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send Matrix B to Master: %d.\n", my_id, err);
             exit(-1);
         }
     } else {
-        err = MPI_Recv(&my_matrixB, N * N * 2 / process_count, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+        err = MPI_Recv(&my_matrixB, N * bant_count, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Received Matrix B from Master: %d.\n", my_id, err);
             exit(-1);
         }
     }
     if (verbose) {
-        printMatrix("My Matrix B", N, N / (process_count / 2), my_matrixB, my_id);
+        printMatrix("My Matrix B", N, bant_count, my_matrixB, my_id);
     }
 
     // Do the calculations
     if (verbose) printf("Process %d:\t\t\tStarted calculations.\n", my_id);
-    int my_result[N / (process_count / 2)][N / (process_count / 2)];
-    for (int i = 0; i < N / (process_count / 2); i++) {
-        for (int j = 0; j < N / (process_count / 2); j++) {
+    int my_result[N / (half_process_count)][N / (half_process_count)];
+    for (int i = 0; i < N / (half_process_count); i++) {
+        for (int j = 0; j < N / (half_process_count); j++) {
             my_result[i][j] = 0;
             for (int k = 0; k < N; k++) {
                 my_result[i][j] += (my_matrixA[i][k] * my_matrixB[k][j]);
@@ -149,14 +154,14 @@ int main(int argc, char *argv[]) {
     col = getMatrixBCol(my_id, process_count, 1);
     log = (char *) malloc(200 * sizeof(char));
     sprintf(log, "My Result (Row: %d\tCol: %d)", row, col);
-    printMatrix(log, N / (process_count / 2), N / (process_count / 2), my_result, my_id);
+    printMatrix(log, bant_count, bant_count, my_result, my_id);
 
     // Send or get the calculations.
-    /*if (my_id == root) {
+    if (my_id == root) {
         if (process_count > 1) {
             for(int i=1; i<process_count; i++){
-                row = getMatrixARow(i);
-                col = getMatrixBCol(i, process_count, block_size);
+                row = getMatrixARow(i, process_count, 1);
+                col = getMatrixBCol(i, process_count, 1);
                 err = MPI_Recv(&matrixC[row][col], 1, matrixC_type, i, 0, MPI_COMM_WORLD, &status);
                 if (err != 0) {
                     printf("Process %d:\t\t\t!!ERROR: Received result from worker: %d.\n", i, err);
@@ -165,21 +170,21 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        row = getMatrixARow(my_id);
-        col = getMatrixBCol(my_id);
-        err = MPI_Sendrecv(&my_result, block_size * block_size, MPI_INT, root, 0, &matrixC[row][col], 1, matrixC_type, root, 0,
+        row = getMatrixARow(my_id, process_count, 1);
+        col = getMatrixBCol(my_id, process_count, 1);
+        err = MPI_Sendrecv(&my_result, bant_count * bant_count, MPI_INT, root, 0, &matrixC[row][col], 1, matrixC_type, root, 0,
                            MPI_COMM_WORLD, &status);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
             exit(-1);
         }
     } else {
-        err = MPI_Send(&my_result, block_size * block_size, MPI_INT, root, 0, MPI_COMM_WORLD);
+        err = MPI_Send(&my_result, bant_count * bant_count, MPI_INT, root, 0, MPI_COMM_WORLD);
         if (err != 0) {
             printf("Process %d:\t\t\t!!ERROR: Send result to Master: %d.\n", my_id, err);
             exit(-1);
         }
-    }*/
+    }
 
     if(my_id == root) {
         printMatrix("Matrix C is", N, N, matrixC, my_id);
