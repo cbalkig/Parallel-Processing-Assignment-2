@@ -8,10 +8,6 @@
 #include <string.h>
 #include "common.c"
 
-int getMatrixARow(int i, int count, int size);
-
-int getMatrixBCol(int i, int count, int size);
-
 int main(int argc, char *argv[]) {
     // Some logging
     printf("Block Data Structure - Program started.\n");
@@ -21,8 +17,7 @@ int main(int argc, char *argv[]) {
     char *matrixA_file_name = (char *) malloc(1000 * sizeof(char));
     char *matrixB_file_name = (char *) malloc(1000 * sizeof(char));
     char *log = (char *) malloc(200 * sizeof(char));
-    int my_name_len, process_count, my_id, err, row, col;
-    char my_name[MPI_MAX_PROCESSOR_NAME];
+    int process_count, my_id, err, row, col;
     MPI_Status status;
     int root = 0;
 
@@ -35,9 +30,6 @@ int main(int argc, char *argv[]) {
 
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
-    MPI_Get_processor_name(my_name, &my_name_len);
-    printf("Process %d:\t\t\tProcessor Count: %d\t\tMy ID: %d\t\tMy Name: %s\n", my_id, process_count, my_id,
-           my_name);
 
     int N = getParameters(process_count, argv);
     sprintf(matrixA_file_name, "%s%d%s", "/Users/balki/CLionProjects/Assignment-1/files/", N, "/matrixA.txt");
@@ -50,11 +42,7 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    int half_process_count = process_count / 2;
-    int block_size = N / half_process_count;
-    if (my_id == root){
-        printf("Process %d:\t\t\tN: %d\tBlock size: %d\n", my_id, N, block_size);
-    }
+    int block_size = getBlockSize(N, process_count);
 
     // MPI Custom Data Types
     MPI_Datatype matrixB_type;
@@ -200,4 +188,9 @@ int getMatrixARow(int i, int process_count, int block_size) {
 
 int getMatrixBCol(int i, int process_count, int block_size) {
     return (i % (process_count / 2)) * block_size;
+}
+
+int getBlockSize(int N, int process_count) {
+    int half_process_count = process_count / 2;
+    return N / half_process_count;
 }

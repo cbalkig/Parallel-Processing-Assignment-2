@@ -11,6 +11,12 @@ typedef enum {
     false, true
 } bool;
 
+int getMatrixARow(int i, int count, int size);
+
+int getMatrixBCol(int i, int count, int size);
+
+int getBlockSize(int N, int process_count);
+
 int getParameters(int process_count, char **argv) {
     int size = atoi(argv[1]);
     if(size % process_count != 0){
@@ -18,27 +24,6 @@ int getParameters(int process_count, char **argv) {
         exit(-1);
     }
     return size;
-}
-
-int getLineCount(char name[], int my_id) {
-    FILE *file;
-
-    file = fopen(name, "r");
-    if (file == NULL) {
-        printf("Process %d:\t\t\tFile read error: %s!\n", my_id, name);
-        exit(-1);
-    }
-
-    int count_lines = 0;
-    char chr = chr = getc(file);
-    while (chr != EOF) {
-        if (chr == '\n') {
-            count_lines++;
-        }
-        chr = getc(file);
-    }
-    fclose(file);
-    return count_lines + 1;
 }
 
 void readFile(char name[], int size, int x[size][size], int my_id) {
@@ -66,21 +51,10 @@ void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][c
     for (int row = 0; row < rowCount; row++) {
         sprintf(s, "%s\t\t\t\t\t", s);
         for (int columns = 0; columns < columnCount; columns++) {
-            sprintf(s, "%s%d\t\t", s, matrix[row][columns]);
+            sprintf(s, "%s%d\t", s, matrix[row][columns]);
         }
         sprintf(s, "%s\n", s);
     }
     printf("Process %d:\t\t\t%s", my_id, s);
-    free(s);
-}
-
-void printVector(char *id, int size, int vector[size], int my_id) {
-    char *s = (char *) malloc(1000 * sizeof(char));
-    sprintf(s, "%s\n", id);
-    sprintf(s, "%s\t\t\t\t\t", s);
-    for (int row = 0; row < size; row++) {
-        sprintf(s, "%s%d\t\t", s, vector[row]);
-    }
-    printf("Process %d:\t\t\t%s\n", my_id, s);
     free(s);
 }
