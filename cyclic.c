@@ -60,9 +60,10 @@ int main(int argc, char *argv[]) {
     int displacements[bant_count * bant_count];
     for (int i = 0; i<bant_count * bant_count; i++)
     {
-        lengths[i] = 0;
-        displacements[i] = (half_process_count * (i % N)) + (N * (i / bant_count));
+        lengths[i] = 1;
+        displacements[i] = (i % bant_count) * half_process_count + ((i / bant_count) * (half_process_count * N));
     }
+
     MPI_Datatype matrixC_type;
     MPI_Type_indexed(bant_count * bant_count, lengths, displacements, MPI_INT, &matrixC_type);
     MPI_Type_commit(&matrixC_type);
