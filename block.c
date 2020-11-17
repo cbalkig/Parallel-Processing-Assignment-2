@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     char *matrixA_file_name = (char *) malloc(1000 * sizeof(char));
     char *matrixB_file_name = (char *) malloc(1000 * sizeof(char));
     char *log = (char *) malloc(200 * sizeof(char));
-    int block_size, my_name_len, process_count, my_id, err, row, col;
+    int my_name_len, process_count, my_id, err, row, col;
     char my_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Status status;
     int root = 0;
@@ -50,7 +50,8 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    block_size = N / (process_count / 2);
+    int half_process_count = process_count / 2;
+    int block_size = N / half_process_count;
     if (my_id == root){
         printf("Process %d:\t\t\tN: %d\tBlock size: %d\n", my_id, N, block_size);
     }
