@@ -8,6 +8,8 @@
 #include <string.h>
 #include "common.c"
 
+int getBlockCount(int n, int count);
+
 int main(int argc, char *argv[]) {
     // Some logging
     printf("Cyclic Data Structure - Program started.\n");
@@ -43,7 +45,7 @@ int main(int argc, char *argv[]) {
     }
 
     int half_process_count = process_count / 2;
-    int bant_count = N / half_process_count;
+    int bant_count = getBlockCount(N, process_count);
 
     // MPI Custom Data Types
     MPI_Datatype matrixA_type;
@@ -54,9 +56,14 @@ int main(int argc, char *argv[]) {
     MPI_Type_vector(N * bant_count, 1, half_process_count, MPI_INT, &matrixB_type);
     MPI_Type_commit(&matrixB_type);
 
+    int lengths[bant_count * bant_count];
+    int displacements[bant_count * bant_count];
+    for (int i = 0; i<bant_count * bant_count; i++)
+    {
+        lengths[i] = 0;
+        displacements[i] = (half_process_count * (i % N)) + (N * (i / bant_count));
+    }
     MPI_Datatype matrixC_type;
-    int lengths[4] = { 1, 1, 1, 1 };
-    int displacements[4] = { 0, half_process_count, bant_count * N, bant_count * N + half_process_count};
     MPI_Type_indexed(bant_count * bant_count, lengths, displacements, MPI_INT, &matrixC_type);
     MPI_Type_commit(&matrixC_type);
 
@@ -197,7 +204,7 @@ int getMatrixBCol(int i, int process_count, int block_size) {
     return (i % (process_count / 2)) * block_size;
 }
 
-int getBlockSize(int N, int process_count) {
+int getBlockCount(int N, int process_count) {
     int half_process_count = process_count / 2;
     return N / half_process_count;
 }

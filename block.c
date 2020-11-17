@@ -8,6 +8,8 @@
 #include <string.h>
 #include "common.c"
 
+int getBlockSize(int n, int count);
+
 int main(int argc, char *argv[]) {
     // Some logging
     printf("Block Data Structure - Program started.\n");

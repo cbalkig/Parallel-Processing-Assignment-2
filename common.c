@@ -15,8 +15,6 @@ int getMatrixARow(int i, int count, int size);
 
 int getMatrixBCol(int i, int count, int size);
 
-int getBlockSize(int N, int process_count);
-
 int getParameters(int process_count, char **argv) {
     int size = atoi(argv[1]);
     if(size % process_count != 0){
