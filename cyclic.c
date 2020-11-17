@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     printf("Cyclic Data Structure - Program started.\n");
 
     // Declarations
-    bool verbose = true;
+    bool verbose = false;
     char *matrixA_file_name = (char *) malloc(1000 * sizeof(char));
     char *matrixB_file_name = (char *) malloc(1000 * sizeof(char));
     char *log = (char *) malloc(200 * sizeof(char));
