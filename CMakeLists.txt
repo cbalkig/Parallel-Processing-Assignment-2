@@ -3,7 +3,4 @@ project(Assignment-1 C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(Assignment-1 block.c cyclic.c common.c)
-set(CMAKE_C_COMPILER mpicc)
-set(CMAKE_CXX_COMPILER mpicxx)
-target_link_libraries(Assignment-1 mpi)
+add_executable(Assignment-2 main.c common.c)
