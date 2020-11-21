@@ -3,4 +3,6 @@ project(Assignment-1 C)
 
 set(CMAKE_C_STANDARD 99)
 
+find_package(OpenMP REQUIRED)
 add_executable(Assignment-2 main.c)
+target_link_libraries(Assignment-2 PRIVATE OpenMP::OpenMP_C)

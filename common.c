@@ -23,3 +23,13 @@ void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][c
     printf(s);
     free(s);
 }
+
+void logTime(char *id, clock_t start, clock_t end) {
+    char *s = (char *) malloc(1000 * sizeof(char));
+    sprintf(s, "%s", id);
+    double cpu_time_used;
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    sprintf(s, "%s%f seconds\n", s, cpu_time_used);
+    printf(s);
+    free(s);
+}
