@@ -7,15 +7,12 @@
 #include <time.h>
 #include "common.c"
 
-#define N               20
-#define ADJACENT_COUNT  8
+#define N               3
 #define EPOCH_COUNT     10
 
 void assignValues(int row_count, int column_count, int matrix[row_count][column_count]);
 
-void myAdjacents(int size, int row, int column, int matrix[size][size], int adjacents[ADJACENT_COUNT]);
-
-int sumVector(int adjacents[ADJACENT_COUNT]);
+int sumAdjacents(int size, int row, int column, int matrix[size][size]);
 
 int main(int argc, char *argv[]) {
     printf("Program started.\n");
@@ -35,9 +32,8 @@ int main(int argc, char *argv[]) {
         for (int row = 0; row < N; row++) {
             #pragma omp parallel for num_threads(N)
             for (int col = 0; col < N; col++) {
-                int adjacents[ADJACENT_COUNT];
-                myAdjacents(N, row, col, matrix, &adjacents);
-                if (sumVector(adjacents) > 5) {
+                int sum = sumAdjacents(N, row, col, matrix);
+                if (sum > 5) {
                     new_matrix[row][col] = 1;
                 } else {
                     new_matrix[row][col] = 0;
@@ -52,42 +48,36 @@ int main(int argc, char *argv[]) {
     }
 }
 
-int sumVector(int adjacents[ADJACENT_COUNT]) {
+int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
     int sum = 0;
-    for (int i = 0; i < ADJACENT_COUNT; i++) {
-        sum += adjacents[i];
-    }
-    return sum;
-}
 
-void myAdjacents(int size, int row, int column, int matrix[size][size], int adjacents[ADJACENT_COUNT]) {
-    int count = 0;
-
-    #pragma omp parallel for num_threads(3)
+    #pragma omp parallel for num_threads(9) collapse(2) reduction (+:sum)
     for (int i = row - 1; i <= row + 1; i++) {
-        if (i < 0) {
-            continue;
-        }
-
-        #pragma omp parallel for num_threads(3)
         for (int j = column - 1; j <= column + 1; j++) {
+            if (i < 0) {
+                continue;
+            }
             if (j < 0) {
                 continue;
             }
             if (i == row && j == column) {
                 continue;
             }
-            adjacents[count++] = matrix[i][j];
+            sum += matrix[i][j];
+            printf("sumAdjacents\ti = %d, j= %d, threadId = %d \n", i, j, omp_get_thread_num());
         }
     }
+
+    return sum;
 }
 
 void assignValues(int row_count, int column_count, int matrix[row_count][column_count]) {
     clock_t start = clock();
-    #pragma omp parallel for collapse(2) num_threads(N)
+    #pragma omp parallel for num_threads(N * N) collapse(2)
     for (int row = 0; row < row_count; row++) {
         for (int col = 0; col < column_count; col++) {
             matrix[row][col] = rand() % 2;
+            printf("assignValues\ti = %d, j= %d, threadId = %d \n", row, col, omp_get_thread_num());
         }
     }
     logTime("assignValues\t\t\t\t", start, clock());
