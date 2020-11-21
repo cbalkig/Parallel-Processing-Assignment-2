@@ -1,11 +1,11 @@
-assignValues				0.001305 seconds
-Epoch 1 finished: 			0.001268 seconds
-Epoch 2 finished: 			0.000999 seconds
-Epoch 3 finished: 			0.001321 seconds
-Epoch 4 finished: 			0.001340 seconds
-Epoch 5 finished: 			0.001298 seconds
-Epoch 6 finished: 			0.001439 seconds
-Epoch 7 finished: 			0.001200 seconds
-Epoch 8 finished: 			0.001156 seconds
-Epoch 9 finished: 			0.001101 seconds
-Epoch 10 finished: 			0.001248 seconds
+assignValues				0.000630 seconds
+Epoch 1 finished: 			0.000154 seconds
+Epoch 2 finished: 			0.000101 seconds
+Epoch 3 finished: 			0.000213 seconds
+Epoch 4 finished: 			0.000102 seconds
+Epoch 5 finished: 			0.000088 seconds
+Epoch 6 finished: 			0.000082 seconds
+Epoch 7 finished: 			0.000091 seconds
+Epoch 8 finished: 			0.000158 seconds
+Epoch 9 finished: 			0.000111 seconds
+Epoch 10 finished: 			0.000106 seconds
