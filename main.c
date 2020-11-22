@@ -7,7 +7,7 @@
 #include <time.h>
 #include "common.c"
 
-#define N               3
+#define N               20
 #define EPOCH_COUNT     10
 
 bool verbose = false;
@@ -31,9 +31,10 @@ int main(int argc, char *argv[]) {
         clock_t start = clock();
 
         int new_matrix[N][N];
-        #pragma omp parallel for num_threads(N * N) collapse(2)
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
+        int i, j;
+        #pragma omp parallel for num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, matrix, new_matrix)
+        for (i = 0; i < N; i++) {
+            for (j = 0; j < N; j++) {
                 if (verbose) {
                     printf("fullOperation\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
                 }
@@ -57,24 +58,20 @@ int main(int argc, char *argv[]) {
 
 int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
     int sum = 0;
+    int i, j;
 
-    #pragma omp parallel for num_threads(9) collapse(2) reduction (+:sum)
-    for (int i = row - 1; i <= row + 1; i++) {
-        for (int j = column - 1; j <= column + 1; j++) {
+    #pragma omp parallel for num_threads(9) collapse(2) default(none) private(i, j) shared(verbose, matrix, row, column) reduction (+:sum)
+    for (i = row - 1; i <= row + 1; i++) {
+        for (j = column - 1; j <= column + 1; j++) {
             if (verbose) {
                 printf("sumAdjacents\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
-
-            if (i < 0) {
-                continue;
+            if (i < 0 || j < 0 || i >= N || j >= N || (i == row && j == column)) {
+                sum += 0;
             }
-            if (j < 0) {
-                continue;
+            else {
+                sum += matrix[i][j];
             }
-            if (i == row && j == column) {
-                continue;
-            }
-            sum += matrix[i][j];
         }
     }
 
@@ -83,13 +80,15 @@ int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
 
 void assignValues(int row_count, int column_count, int matrix[row_count][column_count]) {
     clock_t start = clock();
-    #pragma omp parallel for num_threads(N * N) collapse(2)
-    for (int row = 0; row < row_count; row++) {
-        for (int col = 0; col < column_count; col++) {
+
+    int i, j;
+    #pragma omp parallel for num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, row_count, column_count, matrix)
+    for (i = 0; i < row_count; i++) {
+        for (j = 0; j < column_count; j++) {
             if (verbose) {
-                printf("assignValues\ti = %d, j = %d, threadId = %d \n", row, col, omp_get_thread_num());
+                printf("assignValues\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
-            matrix[row][col] = rand() % 2;
+            matrix[i][j] = rand() % 2;
         }
     }
     logTime("assignValues\t\t\t\t", start, clock());
