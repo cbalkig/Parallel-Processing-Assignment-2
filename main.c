@@ -7,11 +7,12 @@
 #include <time.h>
 #include "common.c"
 
-#define N               20
+#define N               200
 #define EPOCH_COUNT     10
+#define MAX_THREADS     100
 
-bool verbose = true;
-bool print_results = true;
+bool verbose = false;
+bool print_results = false;
 
 void assignValues(int matrix[N][N]);
 
@@ -19,7 +20,9 @@ int sumAdjacents(int size, int row, int column, int matrix[size][size]);
 
 int main(int argc, char *argv[]) {
     printf("Program started.\n");
-    omp_set_nested(1);
+    clock_t start = clock();
+
+    omp_set_max_active_levels(3);
 
     //Declarations
     int matrix[N][N];
@@ -36,7 +39,7 @@ int main(int argc, char *argv[]) {
 
         int new_matrix[N][N];
         int i, j;
-#pragma omp parallel for schedule(static, 1) num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, matrix, new_matrix)
+#pragma omp parallel for schedule(static, 1) num_threads(MAX_THREADS) collapse(2) default(none) private(i, j) shared(verbose, matrix, new_matrix)
         for (i = 0; i < N; i++) {
             for (j = 0; j < N; j++) {
                 if (verbose) {
@@ -57,8 +60,12 @@ int main(int argc, char *argv[]) {
             printMatrix("Final Matrix", N, N, new_matrix);
         }
 
-        memcpy(matrix, new_matrix, N * N * sizeof(int));
+        memcpy(matrix, new_matrix, MAX_THREADS * sizeof(int));
     }
+
+    logTime("Program finished: \t\t\t", start, clock());
+
+    free(log);
 }
 
 int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
@@ -70,7 +77,7 @@ int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
     int max_column = column + 1;
 
     int i, j;
-#pragma omp parallel for schedule(static, 1) num_threads(9) collapse(2) default(none) private(i, j) shared(verbose, matrix, min_row, min_column, max_row, max_column) reduction (+:sum)
+//#pragma omp parallel for schedule(static, 1) num_threads(9) collapse(2) default(none) private(i, j) shared(verbose, matrix, min_row, min_column, max_row, max_column) reduction (+:sum)
     for (i = min_row; i <= max_row; i++) {
         for (j = min_column; j <= max_column; j++) {
             if (verbose) {
@@ -91,7 +98,7 @@ void assignValues(int matrix[N][N]) {
     clock_t start = clock();
 
     int i, j;
-#pragma omp parallel for schedule(static, 1) num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, matrix)
+#pragma omp parallel for schedule(static, 1) num_threads(MAX_THREADS) collapse(2) default(none) private(i, j) shared(verbose, matrix)
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
             if (verbose) {
