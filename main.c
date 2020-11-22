@@ -66,7 +66,7 @@ int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
             if (verbose) {
                 printf("sumAdjacents\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
-            if (i < 0 || j < 0 || i >= N || j >= N || (i == row && j == column)) {
+            if (i < 0 || j < 0 || i >= N || j >= N) {
                 sum += 0;
             }
             else {
