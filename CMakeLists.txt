@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Assignment-1 C)
+project(Assignment-2 C)
 
 set(CMAKE_C_STANDARD 99)
 
