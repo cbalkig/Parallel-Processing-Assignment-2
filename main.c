@@ -10,36 +10,39 @@
 #define N               20
 #define EPOCH_COUNT     10
 
-bool verbose = false;
+bool verbose = true;
+bool print_results = true;
 
-void assignValues(int row_count, int column_count, int matrix[row_count][column_count]);
+void assignValues(int matrix[N][N]);
 
 int sumAdjacents(int size, int row, int column, int matrix[size][size]);
 
 int main(int argc, char *argv[]) {
     printf("Program started.\n");
+    omp_set_nested(1);
 
     //Declarations
     int matrix[N][N];
     char *log = (char *) malloc(200 * sizeof(char));
 
-    assignValues(N, N, &matrix);
+    assignValues(&matrix);
 
-    printMatrix("Initial Matrix", N, N, matrix);
+    if (print_results) {
+        printMatrix("Initial Matrix", N, N, matrix);
+    }
 
     for (int epoch = 0; epoch < EPOCH_COUNT; epoch++) {
         clock_t start = clock();
 
         int new_matrix[N][N];
         int i, j;
-        #pragma omp parallel for num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, matrix, new_matrix)
+#pragma omp parallel for schedule(static, 1) num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, matrix, new_matrix)
         for (i = 0; i < N; i++) {
             for (j = 0; j < N; j++) {
                 if (verbose) {
                     printf("fullOperation\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
                 }
-                int sum = sumAdjacents(N, i, j, matrix);
-                if (sum > 5) {
+                if (sumAdjacents(N, i, j, matrix) > 5) {
                     new_matrix[i][j] = 1;
                 } else {
                     new_matrix[i][j] = 0;
@@ -50,7 +53,9 @@ int main(int argc, char *argv[]) {
         log = (char *) malloc(200 * sizeof(char));
         sprintf(log, "Epoch %d finished: \t\t\t", (epoch + 1));
         logTime(log, start, clock());
-        printMatrix("Final Matrix", N, N, new_matrix);
+        if (print_results) {
+            printMatrix("Final Matrix", N, N, new_matrix);
+        }
 
         memcpy(matrix, new_matrix, N * N * sizeof(int));
     }
@@ -58,18 +63,22 @@ int main(int argc, char *argv[]) {
 
 int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
     int sum = 0;
-    int i, j;
 
-    #pragma omp parallel for num_threads(9) collapse(2) default(none) private(i, j) shared(verbose, matrix, row, column) reduction (+:sum)
-    for (i = row - 1; i <= row + 1; i++) {
-        for (j = column - 1; j <= column + 1; j++) {
+    int min_row = row - 1;
+    int min_column = column - 1;
+    int max_row = row + 1;
+    int max_column = column + 1;
+
+    int i, j;
+#pragma omp parallel for schedule(static, 1) num_threads(9) collapse(2) default(none) private(i, j) shared(verbose, matrix, min_row, min_column, max_row, max_column) reduction (+:sum)
+    for (i = min_row; i <= max_row; i++) {
+        for (j = min_column; j <= max_column; j++) {
             if (verbose) {
                 printf("sumAdjacents\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
             if (i < 0 || j < 0 || i >= N || j >= N) {
                 sum += 0;
-            }
-            else {
+            } else {
                 sum += matrix[i][j];
             }
         }
@@ -78,13 +87,13 @@ int sumAdjacents(int size, int row, int column, int matrix[size][size]) {
     return sum;
 }
 
-void assignValues(int row_count, int column_count, int matrix[row_count][column_count]) {
+void assignValues(int matrix[N][N]) {
     clock_t start = clock();
 
     int i, j;
-    #pragma omp parallel for num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, row_count, column_count, matrix)
-    for (i = 0; i < row_count; i++) {
-        for (j = 0; j < column_count; j++) {
+#pragma omp parallel for schedule(static, 1) num_threads(N * N) collapse(2) default(none) private(i, j) shared(verbose, matrix)
+    for (i = 0; i < N; i++) {
+        for (j = 0; j < N; j++) {
             if (verbose) {
                 printf("assignValues\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
