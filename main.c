@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Stop timer and log
-    logTime("Program finished: \t\t\t", start, omp_get_wtime());
+    logTime("Program finished. \t\t\t", start, omp_get_wtime());
     free(log);
 }
 
@@ -80,7 +80,7 @@ void playGame(int srcMatrix[N][N], int destMatrix[N][N]) {
 //    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
 //    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
 
-#pragma omp parallel for private(j) shared(destMatrix) num_threads(NUM_OF_THREADS)
+#pragma omp parallel for private(j) shared(destMatrix) num_threads(NUM_OF_THREADS) schedule(static)
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
             if (verbose) {
