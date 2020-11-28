@@ -25,12 +25,10 @@ void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][c
     free(s);
 }
 
-void logTime(char *id, clock_t start, clock_t end) {
+void logTime(char *id, double start, double end) {
     char *s = (char *) malloc(1000 * sizeof(char));
     sprintf(s, "%s", id);
-    double cpu_time_used;
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    sprintf(s, "%s%f seconds\n", s, cpu_time_used);
+    sprintf(s, "%sElapsed time : %f\n", s, end - start);
     printf(s);
     free(s);
 }

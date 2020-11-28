@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     char *log = (char *) malloc(200 * sizeof(char));
 
     // Start timer
-    clock_t start = omp_get_wtime();
+    double start = omp_get_wtime();
 
     // Initial assignment to matrix - random 0 and 1s
     assignValues(&matrixA);
