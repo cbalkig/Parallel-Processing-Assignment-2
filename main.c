@@ -8,11 +8,11 @@
 #include "common.c"
 
 #define N               20
-#define EPOCH_COUNT     10
+#define ITERATION_COUNT 10
 #define NUM_OF_THREADS  4
 
-bool verbose = true;
-bool print_results = false;
+bool verbose = false;
+bool print_results = true;
 
 void assignValues(int matrix[N][N]);
 
@@ -20,12 +20,12 @@ int sumAdjacents(int matrix[N][N], int row, int column);
 
 void playGame(int srcMatrix[N][N], int destMatrix[N][N]);
 
-int main(int argc, char *argv[]) {
-    printf("Program started.\n");
+int getValue(int matrix[N][N], int i, int j);
 
+int main(int argc, char *argv[]) {
     // OpenMP settings
     omp_set_num_threads(NUM_OF_THREADS);
-    omp_set_max_active_levels(3);
+    printf("Program started with %d threads and %d iterations.\n", NUM_OF_THREADS, ITERATION_COUNT);
 
     // Declarations
     int matrixA[N][N];
@@ -42,9 +42,11 @@ int main(int argc, char *argv[]) {
     }
 
     // matrix A --> matrix B and than matrix B to matrix A
-    // so loop count = EPOCH_COUNT / 2
-    for (int epoch = 0; epoch < (EPOCH_COUNT / 2); epoch++) {
+    // so loop count = ITERATION_COUNT / 2
+    for (int iteration = 0; iteration < (ITERATION_COUNT / 2); iteration++) {
+        printf("Iteration started: %d.\n", iteration * 2 + 1);
         playGame(matrixA, matrixB);
+        printf("Iteration started: %d.\n", (iteration + 1) * 2);
         playGame(matrixB, matrixA);
     }
 
@@ -55,31 +57,59 @@ int main(int argc, char *argv[]) {
 
 // Playing the game
 void playGame(int srcMatrix[N][N], int destMatrix[N][N]) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
+    int i, j;
+
+    // The thread distribution of the matrix is :
+//    0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+//    0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+//    0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+//    0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+//    0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+//    1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1
+//    1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1
+//    1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1
+//    1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1
+//    1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1
+//    2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2
+//    2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2
+//    2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2
+//    2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2
+//    2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2	2
+//    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
+//    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
+//    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
+//    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
+//    3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3	3
+
+#pragma omp parallel for private(j) shared(destMatrix) num_threads(NUM_OF_THREADS)
+    for (i = 0; i < N; i++) {
+        for (j = 0; j < N; j++) {
             if (verbose) {
                 printf("playGame\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
-
-            // 1 paddings from left and right
-            // 1 paddings from top and below
-            if(i == 0 || i == N - 1 || j == 0 || j == N - 1) {
-                // Put 0 for padding
-                destMatrix[i][j] = 0;
-                continue;
-            }
-
-            if (sumAdjacents(srcMatrix, i, j) > 5) {
-                destMatrix[i][j] = 1;
-            } else {
-                destMatrix[i][j] = 0;
-            }
+            destMatrix[i][j] = getValue(srcMatrix, i, j);
         }
     }
+#pragma omp barrier
 
     // Print the results
     if (print_results) {
-        printMatrix("Final Matrix", N, N, destMatrix);
+        printMatrix("Final Matrix :", N, N, destMatrix);
+    }
+}
+
+int getValue(int matrix[N][N], int i, int j) {
+    // 1 paddings from left and right
+    // 1 paddings from top and below
+    if (i == 0 || i == N - 1 || j == 0 || j == N - 1) {
+        // Put 0 for padding
+        return 0;
+    }
+
+    if (sumAdjacents(matrix, i, j) > 5) {
+        return 1;
+    } else {
+        return 0;
     }
 }
 
