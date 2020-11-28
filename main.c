@@ -4,11 +4,10 @@
 
 #include <stdio.h>
 #include <omp.h>
-#include <time.h>
 #include "common.c"
 
 #define N               20
-#define ITERATION_COUNT 10
+#define ITERATION_COUNT 1000
 #define NUM_OF_THREADS  4
 
 bool verbose = false;
@@ -33,7 +32,7 @@ int main(int argc, char *argv[]) {
     char *log = (char *) malloc(200 * sizeof(char));
 
     // Start timer
-    clock_t start = clock();
+    clock_t start = omp_get_wtime();
 
     // Initial assignment to matrix - random 0 and 1s
     assignValues(&matrixA);
@@ -51,7 +50,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Stop timer and log
-    logTime("Program finished: \t\t\t", start, clock());
+    logTime("Program finished: \t\t\t", start, omp_get_wtime());
     free(log);
 }
 
@@ -85,7 +84,7 @@ void playGame(int srcMatrix[N][N], int destMatrix[N][N]) {
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
             if (verbose) {
-                printf("playGame\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
+                printf("Play Game\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
             }
             destMatrix[i][j] = getValue(srcMatrix, i, j);
         }
