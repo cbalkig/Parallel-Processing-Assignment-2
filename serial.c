@@ -27,7 +27,6 @@ int main(int argc, char *argv[]) {
     // Declarations
     int matrixA[N][N];
     int matrixB[N][N];
-    char *log = (char *) malloc(200 * sizeof(char));
 
     // Start timer
     double start = omp_get_wtime();
@@ -53,7 +52,6 @@ int main(int argc, char *argv[]) {
 
     // Stop timer and log
     logTime("Program finished. \t\t\t", start, omp_get_wtime());
-    free(log);
 }
 
 // Playing the game

@@ -29,7 +29,6 @@ int main(int argc, char *argv[]) {
     // Declarations
     int matrixA[N][N];
     int matrixB[N][N];
-    char *log = (char *) malloc(200 * sizeof(char));
 
     // Start timer
     double start = omp_get_wtime();
@@ -55,13 +54,11 @@ int main(int argc, char *argv[]) {
 
     // Stop timer and log
     logTime("Program finished. \t\t\t", start, omp_get_wtime());
-    free(log);
 }
 
 // Playing the game
 void playGame(int srcMatrix[N][N], int destMatrix[N][N]) {
     int threads_matrix[N][N];
-
     int i, j;
 #pragma omp parallel for private(j) shared(destMatrix) num_threads(NUM_OF_THREADS) schedule(dynamic)
     for (i = 0; i < N; i++) {
@@ -116,8 +113,10 @@ int sumAdjacents(int matrix[N][N], int row, int column) {
 }
 
 void assignValues(int matrix[N][N]) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
+    int i, j;
+#pragma omp parallel for private(j) shared(matrix) num_threads(NUM_OF_THREADS) schedule(dynamic)
+    for (i = 0; i < N; i++) {
+        for (j = 0; j < N; j++) {
             // Assign 0 or 1 - random decision
             matrix[i][j] = rand() % 2;
         }
