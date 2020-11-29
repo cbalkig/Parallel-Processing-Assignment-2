@@ -7,11 +7,11 @@
 #include "common.c"
 
 #define N               20
-#define ITERATION_COUNT 1000
+#define ITERATION_COUNT 10
 #define NUM_OF_THREADS  4
 
 bool verbose = false;
-bool print_results = true;
+bool print_results = false;
 
 void assignValues(int matrix[N][N]);
 
