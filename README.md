@@ -59,6 +59,7 @@ Samples of threads assignments for playGame method: (N=4)
 
 A sample output of Parallel v2 option:
 Program started with 4 threads and 10 iterations.
+After some iterations, the matrix become a sparse matrix that has lots of 0s.
 
 **Initial Matrix**
 
