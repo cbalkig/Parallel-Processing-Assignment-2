@@ -28,7 +28,7 @@ void printMatrix(char *id, int rowCount, int columnCount, int matrix[rowCount][c
 void logTime(char *id, double start, double end) {
     char *s = (char *) malloc(1000 * sizeof(char));
     sprintf(s, "%s", id);
-    sprintf(s, "%sElapsed time : %f\n", s, end - start);
+    sprintf(s, "%sTotal execution time : %f\n", s, end - start);
     printf(s);
     free(s);
 }

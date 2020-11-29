@@ -2,53 +2,20 @@
 
 I've coded 3 different modes:
 
-- Sequential mode           -> sequential.c
+- Serial mode               -> serial.c
 - Parallel mode (Option 1)  -> parallel_v1.c - Uses OpenMP
 - Parallel mode (Option 2)  -> parallel_v2.c - Uses OpenMP
+- Parallel mode (Option 3)  -> parallel_v3.c - Uses OpenMP
+- Parallel mode (Option 4)  -> parallel_v4.c - Uses OpenMP
 
-The results of my experiments are:
-      
-    N = 20 * 20
-    verbose = false, print_results = false
-    
-    ITERATION_COUNT = 10
-    Sequential - Elapsed time : 0.000131
-    Parallel mode (Option 1) - Elapsed time : 0.000630
-    Parallel mode (Option 2) - Elapsed time : 0
-    
-    ITERATION_COUNT = 100
-    Sequential - Elapsed time : 0.001228
-    Parallel mode (Option 1) - Elapsed time : 0.004359
-    Parallel mode (Option 2) - Elapsed time : 0
-        
-    ITERATION_COUNT = 1000
-    Sequential - Elapsed time : 0.026524
-    Parallel mode (Option 1) - Elapsed time : 0.052764
-    Parallel mode (Option 2) - Elapsed time : 0
-    
-    -------
-    
-    N = 1000 * 1000
-    verbose = false, print_results = false
-    
-    ITERATION_COUNT = 10
-    Sequential - Elapsed time : 0.286908
-    Parallel mode (Option 1) - Elapsed time : 0.117272
-    Parallel mode (Option 2) - Elapsed time : 0
-    
-    ITERATION_COUNT = 100
-    Sequential - Elapsed time : 2.914351
-    Parallel mode (Option 1) - Elapsed time : 0.900778
-    Parallel mode (Option 2) - Elapsed time : 0
-        
-    ITERATION_COUNT = 1000
-    Sequential - Elapsed time : 29.913363
-    Parallel mode (Option 1) - Elapsed time : 9.116429
-    Parallel mode (Option 2) - Elapsed time : 0
-
-For small N value, sequential mode has better results for timing metric.
+In the experiments, I've repeated every mode 10 times and take the average of the execution times.
+The results are in ***.xlsx file.
+ 
+For small N value, serial mode has better results for timing metric.
 BUT when N=1000, parallel modes improves the performance.
-Parallel_v1 has the best timing for large iteration counts.
+Parallel_v3 has the best timing for large iteration counts.
+Dynamic scheduling is faster than static ones.
+Parallelising initial random assignment of the matrix has no positive effect.
 
 For execution, please run:
 
@@ -61,3 +28,35 @@ For Unix environments, you can use:
     gcc-10 -o playGame -fopenmp main.c
     setenv OMP_NUM_THREADS=4
     ./playGame
+
+Samples of threads matrix for play game method: (N=4)
+- Serial
+
+                                        0       0       0       0       
+                                        0       0       0       0       
+                                        0       0       0       0       
+                                        0       0       0       0  
+
+- Parallel v1
+
+                                        0       0       0       0       
+                                        1       1       1       1       
+                                        2       2       2       2       
+                                        3       3       3       3    
+                                        
+- Parallel v3
+
+                                        1       1       1       1       
+                                        1       1       1       1       
+                                        0       0       0       0       
+                                        2       2       2       2  
+                                        
+- Parallel v4
+
+                                        1       1       1       1       
+                                        2       2       2       2       
+                                        1       1       1       1       
+                                        1       1       1       1       
+                                     
+                                       
+                                       

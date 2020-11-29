@@ -6,12 +6,12 @@
 #include <omp.h>
 #include "common.c"
 
-#define N               4
-#define ITERATION_COUNT 2
+#define N               20
+#define ITERATION_COUNT 10
 #define NUM_OF_THREADS  4
 #define VERBOSE         0
 #define PRINT_RESULTS   0
-#define PRINT_THREADS   1
+#define PRINT_THREADS   0
 
 void assignValues(int matrix[N][N]);
 
@@ -22,9 +22,7 @@ void playGame(int srcMatrix[N][N], int destMatrix[N][N]);
 int getValue(int matrix[N][N], int i, int j);
 
 int main(int argc, char *argv[]) {
-    // OpenMP settings
-    omp_set_num_threads(NUM_OF_THREADS);
-    printf("Program started with %d threads and %d iterations.\n", NUM_OF_THREADS, ITERATION_COUNT);
+    printf("Program started.\n");
 
     // Declarations
     int matrixA[N][N];
@@ -42,18 +40,15 @@ int main(int argc, char *argv[]) {
 
     // matrix A --> matrix B and than matrix B to matrix A
     // so loop count = ITERATION_COUNT / 2
-#pragma omp parallel num_threads(NUM_OF_THREADS)
     for (int iteration = 0; iteration < (ITERATION_COUNT / 2); iteration++) {
         if(VERBOSE > 0) {
             printf("Iteration started: %d.\n", iteration * 2 + 1);
         }
         playGame(matrixA, matrixB);
-#pragma omp barrier
         if(VERBOSE > 0) {
             printf("Iteration started: %d.\n", (iteration + 1) * 2);
         }
         playGame(matrixB, matrixA);
-#pragma omp barrier
     }
 
     // Stop timer and log
@@ -68,9 +63,6 @@ void playGame(int srcMatrix[N][N], int destMatrix[N][N]) {
     int i, j;
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
-            if (VERBOSE > 0) {
-                printf("Play Game\ti = %d, j = %d, threadId = %d \n", i, j, omp_get_thread_num());
-            }
             threads_matrix[i][j] = omp_get_thread_num();
             destMatrix[i][j] = getValue(srcMatrix, i, j);
         }
