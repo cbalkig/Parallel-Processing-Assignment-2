@@ -1,3 +1,0 @@
-N = 20
-All Parallel
-    0.000113 seconds
